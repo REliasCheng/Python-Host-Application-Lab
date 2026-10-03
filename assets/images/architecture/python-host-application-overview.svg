@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">Python host application bidirectional serial architecture</title>
+  <desc id="desc">User input passes through a PyQt GUI, application logic, and pyserial communication to an unverified external serial device. Receive data returns through a blocking reader to application state and GUI output.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"/>
+    </marker>
+    <style>
+      .label { fill: #f8fafc; font-size: 22px; font-weight: 700; text-anchor: middle; }
+      .sub { fill: #cbd5e1; font-size: 15px; text-anchor: middle; }
+      .note { fill: #94a3b8; font-size: 14px; text-anchor: middle; }
+      .line { fill: none; stroke: #94a3b8; stroke-width: 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1200" height="620" rx="28" fill="#0f172a"/>
+  <text x="600" y="55" fill="#f8fafc" font-size="30" font-weight="700" text-anchor="middle">Python Host Application Architecture</text>
+  <text x="600" y="85" class="note">Documentation model — runtime and device behavior not validated</text>
+
+  <rect x="55" y="150" width="205" height="120" rx="18" fill="#475569"/>
+  <text x="157" y="200" class="label">User Input</text>
+  <text x="157" y="232" class="sub">Port · Baud · Text</text>
+
+  <rect x="315" y="150" width="205" height="120" rx="18" fill="#2563eb"/>
+  <text x="417" y="200" class="label">PyQt5 GUI</text>
+  <text x="417" y="232" class="sub">Widgets · Signals</text>
+
+  <rect x="575" y="150" width="205" height="120" rx="18" fill="#1d4ed8"/>
+  <text x="677" y="200" class="label">App Logic</text>
+  <text x="677" y="232" class="sub">State · Events</text>
+
+  <rect x="835" y="150" width="205" height="120" rx="18" fill="#0284c7"/>
+  <text x="937" y="200" class="label">pyserial</text>
+  <text x="937" y="232" class="sub">Open · RX · TX</text>
+
+  <rect x="835" y="405" width="205" height="120" rx="18" fill="#15803d"/>
+  <text x="937" y="455" class="label">Serial Device</text>
+  <text x="937" y="487" class="sub">Target not specified</text>
+
+  <rect x="315" y="405" width="465" height="120" rx="18" fill="#f8fafc"/>
+  <text x="547" y="450" fill="#0f172a" font-size="22" font-weight="700" text-anchor="middle">GUI Output / Evidence</text>
+  <text x="547" y="482" fill="#334155" font-size="15" text-anchor="middle">Received text · status · timestamps</text>
+
+  <path d="M260 210 H315" class="line"/>
+  <path d="M520 210 H575" class="line"/>
+  <path d="M780 210 H835" class="line"/>
+  <path d="M937 270 V405" class="line"/>
+  <text x="955" y="342" class="note">TX: GBK + CRLF</text>
+
+  <path d="M835 465 H780" class="line"/>
+  <path d="M780 465 H740" class="line"/>
+  <text x="807" y="445" class="note">RX</text>
+  <path d="M575 405 V330 H417 V405" class="line"/>
+  <text x="500" y="315" class="note">Background read → application state</text>
+</svg>
