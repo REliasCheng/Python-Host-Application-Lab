@@ -3,7 +3,11 @@ import pytest
 from host_app.communication.mock_serial import MockSerialBackend
 from host_app.core.application import HostApplication
 from host_app.core.config import SerialConfig
-from host_app.core.errors import CommunicationError, DisconnectedError, ProtocolDecodeError
+from host_app.core.errors import (
+    CommunicationError,
+    DisconnectedError,
+    ProtocolDecodeError,
+)
 from host_app.models.connection import ConnectionState
 from host_app.models.message import MessageDirection
 
@@ -54,7 +58,7 @@ def test_open_and_disconnect_failures_propagate_to_error_state() -> None:
     assert app.state == ConnectionState.DISCONNECTED
 
 
-def test_runtime_disconnect_and_decode_failure_enter_error_state() -> None:
+def test_runtime_disconnect_enters_error_state() -> None:
     backend = MockSerialBackend()
     app = HostApplication(backend)
     app.connect(SerialConfig("MOCK0"))
@@ -64,12 +68,35 @@ def test_runtime_disconnect_and_decode_failure_enter_error_state() -> None:
         app.poll()
     assert app.state == ConnectionState.ERROR
 
-    app.disconnect()
+
+def test_decode_failure_enters_error_state() -> None:
+    backend = MockSerialBackend()
+    app = HostApplication(backend)
     app.connect(SerialConfig("MOCK0", encoding="utf-8"))
     backend.queue_receive(b"\xff\n")
+
     with pytest.raises(ProtocolDecodeError):
         app.poll()
     assert app.state == ConnectionState.ERROR
+
+
+def test_application_reconnects_after_runtime_disconnect() -> None:
+    backend = MockSerialBackend()
+    app = HostApplication(backend)
+    config = SerialConfig("MOCK0")
+    app.connect(config)
+    backend.queue_receive(b"stale-partial")
+    assert app.poll() == []
+
+    backend.simulate_disconnect()
+    with pytest.raises(DisconnectedError):
+        app.poll()
+    assert app.state == ConnectionState.ERROR
+
+    app.connect(config)
+    backend.queue_receive(b"fresh\n")
+    assert [message.text for message in app.poll()] == ["fresh"]
+    assert app.state == ConnectionState.CONNECTED
 
 
 def test_connected_operations_are_guarded() -> None:
@@ -87,6 +114,7 @@ def test_connected_operations_are_guarded() -> None:
         {"port": ""},
         {"port": "MOCK0", "baudrate": 0},
         {"port": "MOCK0", "encoding": ""},
+        {"port": "MOCK0", "encoding": "not-a-real-codec"},
         {"port": "MOCK0", "line_ending": "x"},
         {"port": "MOCK0", "read_size": 0},
         {"port": "MOCK0", "read_timeout": -1},

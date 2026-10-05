@@ -1,11 +1,11 @@
 """Validation and encoding for outgoing line-oriented commands."""
 
-from dataclasses import dataclass
+import codecs
 import re
 import shlex
+from dataclasses import dataclass
 
 from host_app.core.errors import InvalidCommandError
-
 
 _COMMAND_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
@@ -41,6 +41,14 @@ def encode_command(
     line_ending: str = "\r\n",
     max_payload_bytes: int = 256,
 ) -> bytes:
+    if line_ending not in {"\n", "\r\n"}:
+        raise ValueError("line_ending must be LF or CRLF")
+    if max_payload_bytes <= 0:
+        raise ValueError("max_payload_bytes must be positive")
+    try:
+        codecs.lookup(encoding)
+    except LookupError as exc:
+        raise ValueError(f"unknown encoding: {encoding}") from exc
     if "\r" in text or "\n" in text:
         raise InvalidCommandError("command must not contain line breaks")
     parsed = parse_command(text)

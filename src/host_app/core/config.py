@@ -1,5 +1,6 @@
 """Validated configuration models for serial communication."""
 
+import codecs
 from dataclasses import dataclass
 
 
@@ -22,6 +23,10 @@ class SerialConfig:
             raise ValueError("baudrate must be positive")
         if not self.encoding.strip():
             raise ValueError("encoding must not be empty")
+        try:
+            codecs.lookup(self.encoding)
+        except LookupError as exc:
+            raise ValueError(f"unknown encoding: {self.encoding}") from exc
         if self.line_ending not in {"\n", "\r\n"}:
             raise ValueError("line_ending must be LF or CRLF")
         if self.read_size <= 0:

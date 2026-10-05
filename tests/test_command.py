@@ -39,4 +39,10 @@ def test_encode_command_rejects_line_break_encoding_and_size_errors() -> None:
         encode_command("status", max_payload_bytes=3)
     with pytest.raises(InvalidCommandError):
         encode_command("send \u6d4b\u8bd5", encoding="ascii")
+    with pytest.raises(ValueError):
+        encode_command("status", encoding="not-a-real-codec")
+    with pytest.raises(ValueError):
+        encode_command("status", line_ending="")
+    with pytest.raises(ValueError):
+        encode_command("status", max_payload_bytes=0)
 

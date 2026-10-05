@@ -47,6 +47,8 @@ def test_parser_validates_configuration_and_input_type() -> None:
         LineParser(encoding="")
     with pytest.raises(ValueError):
         LineParser(max_line_bytes=0)
+    with pytest.raises(ValueError):
+        LineParser(encoding="not-a-real-codec")
 
     parser = LineParser()
     with pytest.raises(TypeError):

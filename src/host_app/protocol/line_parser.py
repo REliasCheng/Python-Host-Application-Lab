@@ -1,5 +1,7 @@
 """Incremental line parser with explicit size and decoding boundaries."""
 
+import codecs
+
 from host_app.core.errors import LineTooLongError, ProtocolDecodeError
 
 
@@ -7,6 +9,10 @@ class LineParser:
     def __init__(self, *, encoding: str = "utf-8", max_line_bytes: int = 256) -> None:
         if not encoding.strip():
             raise ValueError("encoding must not be empty")
+        try:
+            codecs.lookup(encoding)
+        except LookupError as exc:
+            raise ValueError(f"unknown encoding: {encoding}") from exc
         if max_line_bytes <= 0:
             raise ValueError("max_line_bytes must be positive")
         self.encoding = encoding

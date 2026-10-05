@@ -20,6 +20,15 @@ def test_invalid_transition_is_rejected() -> None:
     with pytest.raises(InvalidTransitionError):
         state.transition(ConnectionState.CONNECTED)
 
+    state.transition(ConnectionState.CONNECTING)
+    state.transition(ConnectionState.CONNECTED)
+    with pytest.raises(InvalidTransitionError):
+        state.transition(ConnectionState.CONNECTING)
+
+    state.transition(ConnectionState.ERROR)
+    with pytest.raises(InvalidTransitionError):
+        state.transition(ConnectionState.CONNECTED)
+
 
 def test_error_is_recorded_and_can_reconnect() -> None:
     state = ConnectionStateMachine()
