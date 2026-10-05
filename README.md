@@ -18,7 +18,7 @@
 | Communication | 抽象串口接口、内存 Mock、可选 `pyserial` 适配器 |
 | Protocol | UTF-8 行式文本、CRLF 发送结束符、增量接收解析 |
 | Architecture | GUI → Application Core → Protocol / Communication Backend |
-| Verification | pytest 主机测试、覆盖率门槛、离屏 GUI 启动、Python 包构建 |
+| Verification | pytest、Ruff、Mypy、覆盖率门槛、离屏 GUI 启动、Python 包构建 |
 
 ## Architecture
 
@@ -54,6 +54,7 @@ Mock Backend   pyserial Adapter
 - 显式连接状态机：拒绝非法状态转换并保留错误信息。
 - 最小 PyQt5 界面：端口与波特率选择、连接控制、终端收发和状态显示。
 - 自动化质量门槛：主机测试要求核心模块覆盖率不低于 80%。
+- 静态质量门槛：Ruff 检查源码与测试，Mypy 检查全部 22 个源文件。
 
 ## Project Structure
 
@@ -86,6 +87,29 @@ python -m pip install -e ".[test]"
 python -m pytest
 ```
 
+### Exercise the core without hardware
+
+```python
+from host_app import HostApplication, SerialConfig
+from host_app.communication import MockSerialBackend
+
+backend = MockSerialBackend()
+application = HostApplication(backend)
+application.connect(SerialConfig("MOCK0"))
+application.send_command("status")
+
+backend.queue_receive(b"ready\n")
+print([message.text for message in application.poll()])  # ['ready']
+```
+
+### Run static checks
+
+```powershell
+python -m pip install -e ".[quality]"
+python -m ruff check src tests
+python -m mypy src
+```
+
 ### Run the GUI
 
 ```powershell
@@ -105,8 +129,9 @@ GUI 启动不代表外部串口设备已经验证。连接真实设备前，应�
 
 | Verification Layer | Status | Evidence Boundary |
 | --- | --- | --- |
-| Host Test | PASSED | Python 3.10.11 下 33 项 pytest 全部通过 |
-| Core Coverage | PASSED | 核心、协议、模型和 Mock 通信模块覆盖率 96.81%，门槛为 80% |
+| Host Test | PASSED | Python 3.10.11 下 39 项 pytest 全部通过 |
+| Core Coverage | PASSED | 核心、协议、模型和 Mock 通信模块覆盖率 96.98%，门槛为 80% |
+| Static Analysis | PASSED | Ruff 检查源码与测试；Mypy 检查 22 个源文件 |
 | Build Verification | PASSED | `python -m build` 成功生成 sdist 与 wheel |
 | GUI Launch | PASSED | Qt 离屏环境完成窗口构造与初始状态检查 |
 | Hardware Validation | NOT PROVIDED | 未连接或声明任何真实串口设备 |
