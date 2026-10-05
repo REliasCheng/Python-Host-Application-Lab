@@ -1,53 +1,66 @@
 # Communication Flow
 
+## Backend Selection
+
+应用核心只依赖 `SerialBackend` 接口：
+
+- `MockSerialBackend` 提供确定性的内存通信，用于主机测试和错误注入。
+- `PySerialBackend` 是可选真实串口适配器，pyserial 不随仓库源码分发。
+
 ## Connection Setup
 
-可确认的参考流程如下：
-
 ```text
-Enumerate host serial ports
-  -> choose port
-  -> choose baud rate
-  -> open serial connection
-  -> expose connection status to the GUI
+Enumerate ports
+  → choose port and baud rate
+  → validate SerialConfig
+  → DISCONNECTED → CONNECTING
+  → open selected backend
+  → CONNECTED or ERROR
 ```
 
-配置对话框还展示 data bits、parity、stop bits 和 flow control 选项，但静态审查没有确认这些值被完整传递到最终 `serial.Serial` 实例。因此它们不能被描述为已经生效的通信能力。
+当前配置支持端口、波特率、文本编码、行结束符、读取大小、读取超时和最大行长度。数据位、校验位、停止位及流控制尚未暴露为项目配置能力。
 
 ## Transmit
 
-发送路径从 GUI 文本框取得字符串，追加 `\r\n`，再按 GBK 编码后写入串口。该行为意味着：
+默认发送流程为：
 
-- 对端应按行读取，或能接受 CRLF 后缀。
-- 非 GBK 文本的互操作性未验证。
-- 没有 binary-frame builder、sequence number 或 retry policy。
+```text
+Command text
+  → reject empty or malformed command
+  → normalize shell-style arguments
+  → encode as UTF-8
+  → append CRLF
+  → backend write
+```
+
+这是一条通用行式文本通道，不是 Modbus、CAN、MQTT、BLE 或自定义二进制帧协议。命令语法只定义名称和参数边界，不赋予设备特定语义。
 
 ## Receive
 
-接收路径通过 `readline()` 等待一行字节，按 GBK 解码，再追加到 GUI 记录区域。可选时间戳只影响显示，不属于协议字段。
+`LineParser` 接受任意分段字节输入并保存未完成行。LF 结束一行，前置 CR 会被移除；空行保留。无效 UTF-8、超长行和非字节输入都会产生明确错误。
 
-## Error and Lifecycle Boundary
+## Timeout and Disconnect
 
-当前资料没有形成可验证的完整错误处理模型：
+| Event | Core Behavior |
+| --- | --- |
+| No bytes available | 返回空消息列表，保持连接状态 |
+| Expected read timeout | 返回空消息列表，保持连接状态 |
+| Backend disconnect | 抛出通信错误并进入 `ERROR` |
+| Decode or line-length failure | 抛出协议错误并进入 `ERROR` |
+| Explicit disconnect | 关闭后端、重置解析器并进入 `DISCONNECTED` |
 
-- 未确认 open failure 的用户提示与恢复路径。
-- 未确认 decode failure 的处理。
-- 未确认设备断开后的自动重连。
-- 未确认 worker thread 的停止与回收。
-- 未确认持续高吞吐下的缓冲和背压。
-
-因此本仓库把连接、收发和线程生命周期作为后续实现目标，而不把它们写成已通过验证的能力。
+Mock 后端对超时和断连路径提供了自动化测试证据；真实设备上的电气、驱动和热插拔行为尚未验证。
 
 ## Protocol Boundary
 
-| Item | Confirmed State |
+| Item | Current Implementation |
 | --- | --- |
-| Transport | Serial / UART through `pyserial` |
-| Payload | Text lines |
-| Encoding | GBK |
+| Transport | Serial byte stream through a backend interface |
+| Payload | Line-oriented text |
+| Default encoding | UTF-8 |
 | TX terminator | CRLF |
-| Byte order | Not applicable to confirmed text path |
-| Frame header / length / tail | Not present |
-| Checksum / CRC | Not present |
-| Request / response model | Not formally defined |
-| Device target | Unknown |
+| RX terminator | LF, with optional CR removal |
+| Maximum line | Configurable; default 256 bytes |
+| Frame header / length / CRC | Not implemented |
+| Automatic reconnect | Not implemented |
+| Device target | Not specified or validated |

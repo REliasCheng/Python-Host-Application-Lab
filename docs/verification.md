@@ -2,43 +2,55 @@
 
 ## Evidence Rules
 
-本仓库采用分层证据表达，避免把静态源码存在、语法成功、GUI 启动和真实设备通信混为一谈。
+验证结果按层级记录，避免把代码存在、主机测试、包构建、GUI 启动和真实设备通信混为一谈。
+
+## Reproducible Commands
+
+```powershell
+python -m pip install -e ".[test]"
+python -m pytest
+python -m build
+```
+
+可选 GUI 与串口依赖：
+
+```powershell
+python -m pip install -e ".[gui,serial]"
+host-app
+```
+
+## Recorded Results
 
 | Layer | Result | Evidence |
 | --- | --- | --- |
-| Source Review | PASSED | 对源资料中的 Python、Qt Designer、Qt resource、构建描述和资产引用进行了只读审查 |
-| Source Syntax Review | 128 / 129 passed | 使用 AST 解析检查非构建目录 Python 文件；1 个临时 Code Runner 文件存在 unmatched parenthesis |
-| Public Syntax Validation | NOT APPLICABLE | 公开候选没有 Python 源码 |
-| Host Test | NOT PROVIDED | 源资料与公开候选均未提供 pytest、unittest 或功能测试 |
-| GUI Launch | NOT PROVIDED | 未执行来源不明的课程应用或二进制文件 |
-| Application Runtime | NOT PROVIDED | 公开候选是文档与架构实验 |
-| Device Validation | NOT PROVIDED | 未连接串口设备、MCU、控制器或传感器 |
-| Runtime Evidence | NOT PROVIDED | 未生成运行日志、帧追踪、截图或测量数据 |
+| Host Test | PASSED | Python 3.10.11、pytest 9.0.3，33 / 33 tests passed |
+| Core Coverage | PASSED | 96.81% statement / branch-aware combined coverage；要求至少 80% |
+| Protocol Test | PASSED | 分段行、CRLF / LF、无效编码、超长行与命令校验 |
+| Communication Test | PASSED | Mock 连接、发送、分段接收、空读取、超时与断连 |
+| State Test | PASSED | 正常生命周期、非法转换、错误记录与恢复 |
+| Build Verification | PASSED | `python -m build` 生成 sdist 与 `py3-none-any` wheel |
+| GUI Launch | PASSED | PyQt5 5.15.11 在 Qt 离屏平台构造窗口，初始状态为 `disconnected` |
+| Hardware Validation | NOT PROVIDED | 未连接真实串口设备或 MCU |
+| Runtime Evidence | LIMITED | 仅有 Mock 集成路径和离屏 GUI 启动证据 |
 
-## Static Findings
+## Coverage Scope
 
-静态审查能够确认的内容：
+80% 门槛覆盖以下硬件无关模块：
 
-- Python 3 风格源码。
-- PyQt5 widgets 与 signal / slot 使用。
-- `pyserial` 端口枚举及串口 open / close / read / write 调用。
-- `threading.Thread` 用于端口扫描和接收循环。
-- PyInstaller 构建描述与历史构建产物存在于源资料中，但均未公开。
+- `host_app.core`
+- `host_app.communication.mock_serial`
+- `host_app.protocol`
+- `host_app.models`
 
-静态审查不能证明：
+GUI 与 `PySerialBackend` 需要平台、Qt 或设备边界，不计入核心覆盖率门槛。CI 在 Python 3.10、3.11 和 3.12 上运行同一主机测试命令；远端工作流结果应以 GitHub Actions 实际运行状态为准。
 
-- GUI 能在当前环境正常启动。
-- PyQt5 与 pyserial 依赖组合可复现。
-- 串口设备可连接或收发正确。
-- Bluetooth、数据可视化或设备控制能力存在。
-- 线程模型安全，或长时间运行稳定。
+## Unverified Boundary
 
-## Future Verification Gate
+当前证据不能证明：
 
-若未来从权利清晰的原创实现继续开发，至少应依次完成：
+- 任意外部串口设备能够连接或正确响应命令。
+- 特定 USB-UART 驱动、端口权限或热插拔行为正常。
+- 高吞吐、长时间运行或生产环境稳定性。
+- 自动重连、二进制协议、CRC、数据绘图或设备专用控制能力。
 
-1. 对全部公开 Python 文件执行 syntax validation。
-2. 为与 GUI 无关的状态机、编码与解析逻辑提供 host tests。
-3. 在无设备模式下确认 GUI 启动与关闭。
-4. 使用明确型号的串口设备验证连接、TX、RX、断开和异常路径。
-5. 保存不含隐私的可复核日志或帧追踪，再更新 Runtime Evidence。
+只有在明确设备、连接参数和协议，并保存可复核运行证据后，才能更新 Hardware Validation 或扩展 Runtime Evidence。

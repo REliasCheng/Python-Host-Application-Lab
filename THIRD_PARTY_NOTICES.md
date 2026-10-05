@@ -1,13 +1,12 @@
 # Third-Party Notices
 
-This repository distributes only repository-authored Markdown documentation and SVG artwork.
+This repository contains repository-authored Python source code, tests, Markdown documentation, and SVG artwork.
 
-The documentation refers to the following third-party projects for technical context:
+The project can use the following separately installed third-party packages:
 
 - Python — Python Software Foundation License.
-- PyQt5 — distributed separately under its own licensing terms.
-- pyserial — distributed separately under its own licensing terms.
+- PyQt5 — optional GUI dependency, distributed under its own licensing terms.
+- pyserial — optional serial communication dependency, distributed under its own licensing terms.
+- pytest, pytest-cov, coverage, build, setuptools, and wheel — development or build tools distributed under their respective terms.
 
-No source code, binaries, packages, fonts, images, icons, or build artifacts from these projects are included here. The root MIT License does not relicense any separately obtained dependency.
-
-Course material, training examples, installer packages, generated application bundles, and assets with unconfirmed redistribution rights are intentionally excluded.
+No third-party package source, binary, font, icon, image, course material, installer, device firmware, or generated application bundle is vendored in this repository. The root MIT License applies only to the repository-authored content and does not relicense separately obtained dependencies.
