@@ -52,7 +52,7 @@ jobs:
       - name: Install quality dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[quality]"
+          python -m pip install -e ".[gui,quality]"
 
       - name: Run Ruff
         run: python -m ruff check src tests
