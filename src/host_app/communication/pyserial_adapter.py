@@ -4,7 +4,11 @@ from typing import Any
 
 from host_app.communication.interface import SerialBackend
 from host_app.core.config import SerialConfig
-from host_app.core.errors import CommunicationError, CommunicationTimeout, DisconnectedError
+from host_app.core.errors import (
+    CommunicationError,
+    CommunicationTimeout,
+    DisconnectedError,
+)
 from host_app.models.device import SerialPortInfo
 
 
@@ -57,10 +61,11 @@ class PySerialBackend(SerialBackend):
 
     def write(self, payload: bytes) -> int:
         serial, _ = self._modules()
-        if not self.is_open:
+        connection = self._serial
+        if connection is None or not connection.is_open:
             raise DisconnectedError("serial port is not connected")
         try:
-            return int(self._serial.write(payload))
+            return int(connection.write(payload))
         except serial.SerialTimeoutException as exc:
             raise CommunicationTimeout("serial write timed out") from exc
         except serial.SerialException as exc:
@@ -68,15 +73,16 @@ class PySerialBackend(SerialBackend):
 
     def read(self, max_bytes: int, timeout: float) -> bytes:
         serial, _ = self._modules()
-        if not self.is_open:
+        connection = self._serial
+        if connection is None or not connection.is_open:
             raise DisconnectedError("serial port is not connected")
         if max_bytes <= 0:
             raise ValueError("max_bytes must be positive")
         if timeout < 0:
             raise ValueError("timeout must not be negative")
-        self._serial.timeout = timeout
+        connection.timeout = timeout
         try:
-            return bytes(self._serial.read(max_bytes))
+            return bytes(connection.read(max_bytes))
         except serial.SerialException as exc:
             raise CommunicationError(f"serial read failed: {exc}") from exc
 
