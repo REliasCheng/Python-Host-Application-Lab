@@ -2,7 +2,12 @@
 
 from host_app.communication.interface import SerialBackend
 from host_app.core.config import SerialConfig
-from host_app.core.errors import CommunicationError, CommunicationTimeout, DisconnectedError, ProtocolError
+from host_app.core.errors import (
+    CommunicationError,
+    CommunicationTimeout,
+    DisconnectedError,
+    ProtocolError,
+)
 from host_app.core.state import ConnectionStateMachine
 from host_app.models.connection import ConnectionState
 from host_app.models.device import SerialPortInfo

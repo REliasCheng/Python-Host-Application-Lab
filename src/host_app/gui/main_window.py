@@ -77,9 +77,10 @@ class MainWindow(QMainWindow):
             self._show_error(str(exc))
             self._update_state()
 
-    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 - Qt API name
+    def closeEvent(self, event: QCloseEvent | None) -> None:
         self.application.disconnect()
-        event.accept()
+        if event is not None:
+            event.accept()
 
     def _update_state(self) -> None:
         state = self.application.state

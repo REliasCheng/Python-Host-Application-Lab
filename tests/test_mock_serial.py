@@ -2,7 +2,11 @@ import pytest
 
 from host_app.communication.mock_serial import MockSerialBackend
 from host_app.core.config import SerialConfig
-from host_app.core.errors import CommunicationError, CommunicationTimeout, DisconnectedError
+from host_app.core.errors import (
+    CommunicationError,
+    CommunicationTimeout,
+    DisconnectedError,
+)
 
 
 def test_mock_backend_connect_send_receive_and_close() -> None:

@@ -3,7 +3,6 @@
 from host_app.core.errors import InvalidTransitionError
 from host_app.models.connection import ConnectionState
 
-
 _ALLOWED_TRANSITIONS: dict[ConnectionState, frozenset[ConnectionState]] = {
     ConnectionState.DISCONNECTED: frozenset({ConnectionState.CONNECTING}),
     ConnectionState.CONNECTING: frozenset(

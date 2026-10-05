@@ -1,7 +1,14 @@
 """Terminal receive view and command input."""
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (
+    QHBoxLayout,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from host_app.models.message import TerminalMessage
 

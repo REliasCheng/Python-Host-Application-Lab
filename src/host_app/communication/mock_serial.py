@@ -4,7 +4,11 @@ from collections import deque
 
 from host_app.communication.interface import SerialBackend
 from host_app.core.config import SerialConfig
-from host_app.core.errors import CommunicationError, CommunicationTimeout, DisconnectedError
+from host_app.core.errors import (
+    CommunicationError,
+    CommunicationTimeout,
+    DisconnectedError,
+)
 from host_app.models.device import SerialPortInfo
 
 
