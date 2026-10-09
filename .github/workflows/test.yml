@@ -122,4 +122,4 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           python -m pip install -e ".[gui,serial,test]"
-          python -m pytest tests/test_gui.py
+          python -m pytest -o addopts='' tests/test_gui.py
