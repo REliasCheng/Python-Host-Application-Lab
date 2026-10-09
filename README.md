@@ -18,7 +18,7 @@
 | Communication | 抽象串口接口、内存 Mock、可选 `pyserial` 适配器 |
 | Protocol | UTF-8 行式文本、CRLF 发送结束符、增量接收解析 |
 | Architecture | GUI → Application Core → Protocol / Communication Backend |
-| Verification | pytest、Ruff、Mypy、覆盖率门槛、离屏 GUI 启动、Python 包构建 |
+| Verification | pytest、Ruff、Mypy、覆盖率门槛、离屏 Mock GUI 收发、sdist/wheel 构建与安装 |
 
 ## Architecture
 
@@ -53,6 +53,7 @@ Mock Backend   pyserial Adapter
 - 严格协议处理：验证命令名称、参数、编码、结束符和最大长度。
 - 显式连接状态机：拒绝非法状态转换并保留错误信息。
 - 最小 PyQt5 界面：端口与波特率选择、连接控制、终端收发和状态显示。
+- 显式 `--mock` 演示：`MOCK0` 端口返回标注为 `MOCK ACK` 的模拟响应，不接触真实设备。
 - 自动化质量门槛：主机测试要求核心模块覆盖率不低于 80%。
 - 静态质量门槛：Ruff 检查源码与测试，Mypy 检查全部 22 个源文件。
 
@@ -117,7 +118,7 @@ python -m pip install -e ".[gui,serial]"
 host-app
 ```
 
-GUI 启动不代表外部串口设备已经验证。连接真实设备前，应确认端口、波特率、编码和命令协议均与目标设备一致。
+无硬件演示可运行 `host-app --mock`，连接 `MOCK0` 后发送 `status`，界面会显示 `MOCK ACK: status`。这是真实 Qt 窗口配合内存模拟后端的运行路径，不是设备回包或板端截图。GUI 使用非阻塞串口轮询（`read_timeout=0.0`）；真实设备的延迟和断线行为尚未测量。连接真实设备前，应确认端口、波特率、编码和命令协议均与目标设备一致。
 
 推荐继续阅读：
 
@@ -129,13 +130,13 @@ GUI 启动不代表外部串口设备已经验证。连接真实设备前，应�
 
 | Verification Layer | Status | Evidence Boundary |
 | --- | --- | --- |
-| Host Test | PASSED | Python 3.10.11 下 39 项 pytest 全部通过 |
+| Host Test | PASSED locally | Python 3.10.11 下 45 项 pytest 全部通过；PR CI 以对应 SHA 为准 |
 | Core Coverage | PASSED | 核心、协议、模型和 Mock 通信模块覆盖率 96.98%，门槛为 80% |
 | Static Analysis | PASSED | Ruff 检查源码与测试；Mypy 检查 22 个源文件 |
-| Build Verification | PASSED | `python -m build` 成功生成 sdist 与 wheel |
-| GUI Launch | PASSED | Qt 离屏环境完成窗口构造与初始状态检查 |
+| Build Verification | PASSED locally | 当前源码在隔离临时目录生成 sdist 与 wheel，Wheel 安装后运行 Mock GUI smoke |
+| GUI Launch | PASSED locally | Qt 离屏窗口完成 `MOCK0` 连接、收发、断开及重连；未连接真实设备 |
 | Hardware Validation | NOT PROVIDED | 未连接或声明任何真实串口设备 |
-| Runtime Evidence | LIMITED | 仅包含 Mock 后端集成行为与离屏 GUI 启动，不代表板端通信 |
+| Runtime Evidence | MOCK ONLY | 已运行 Qt 离屏 Mock 收发；没有真实串口或板端通信证据 |
 
 完整记录见 [Verification](docs/verification.md)。
 

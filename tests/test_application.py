@@ -108,6 +108,27 @@ def test_connected_operations_are_guarded() -> None:
         app.poll()
 
 
+def test_close_failure_is_recoverable() -> None:
+    class CloseFailsOnce(MockSerialBackend):
+        failures = 1
+
+        def close(self) -> None:
+            super().close()
+            if self.failures:
+                self.failures -= 1
+                raise CommunicationError("device vanished during close")
+
+    backend = CloseFailsOnce()
+    app = HostApplication(backend)
+    app.connect(SerialConfig("MOCK0"))
+    with pytest.raises(CommunicationError, match="vanished"):
+        app.disconnect()
+    assert app.state == ConnectionState.DISCONNECTED
+    app.connect(SerialConfig("MOCK0"))
+    assert app.state == ConnectionState.CONNECTED
+    app.disconnect()
+
+
 @pytest.mark.parametrize(
     "changes",
     [

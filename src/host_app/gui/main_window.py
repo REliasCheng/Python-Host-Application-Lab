@@ -4,6 +4,7 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QMainWindow, QMessageBox, QVBoxLayout, QWidget
 
+from host_app.communication.interface import SerialBackend
 from host_app.communication.pyserial_adapter import PySerialBackend
 from host_app.core.application import HostApplication
 from host_app.core.config import SerialConfig
@@ -14,12 +15,12 @@ from host_app.models.connection import ConnectionState
 
 
 class MainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, backend: SerialBackend | None = None) -> None:
         super().__init__()
         self.setWindowTitle("Python Host Application Lab")
         self.resize(900, 560)
 
-        self.application = HostApplication(PySerialBackend())
+        self.application = HostApplication(backend if backend is not None else PySerialBackend())
         self.connection_panel = ConnectionPanel()
         self.terminal = TerminalView()
 
@@ -51,14 +52,20 @@ class MainWindow(QMainWindow):
     def connect_serial(self, port: str, baudrate: int) -> None:
         try:
             self.connection_panel.set_state(ConnectionState.CONNECTING)
-            self.application.connect(SerialConfig(port=port, baudrate=baudrate))
+            # GUI polling is non-blocking; the core's default timeout remains
+            # available to non-GUI callers.
+            self.application.connect(SerialConfig(port=port, baudrate=baudrate, read_timeout=0.0))
         except (HostApplicationError, ValueError) as exc:
             self._show_error(str(exc))
         self._update_state()
 
     def disconnect_serial(self) -> None:
-        self.application.disconnect()
-        self._update_state()
+        try:
+            self.application.disconnect()
+        except HostApplicationError as exc:
+            self._show_error(str(exc))
+        finally:
+            self._update_state()
 
     def send_command(self, command: str) -> None:
         try:
@@ -78,7 +85,11 @@ class MainWindow(QMainWindow):
             self._update_state()
 
     def closeEvent(self, event: QCloseEvent | None) -> None:
-        self.application.disconnect()
+        self.poll_timer.stop()
+        try:
+            self.application.disconnect()
+        except HostApplicationError as exc:
+            self._show_error(str(exc))
         if event is not None:
             event.accept()
 

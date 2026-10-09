@@ -27,9 +27,12 @@ class FakeConnection:
         self.incoming = b"ready\n"
         self.write_error: Exception | None = None
         self.read_error: Exception | None = None
+        self.close_error: Exception | None = None
 
     def close(self) -> None:
         self.is_open = False
+        if self.close_error is not None:
+            raise self.close_error
 
     def write(self, payload: bytes) -> int:
         if self.write_error is not None:
@@ -125,3 +128,17 @@ def test_pyserial_adapter_validates_disconnected_reads(
         backend.write(b"status\r\n")
     with pytest.raises(DisconnectedError):
         backend.read(8, 0.1)
+
+
+def test_close_failure_is_normalized_and_releases_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection, _ = install_fake_modules(monkeypatch)
+    backend = PySerialBackend()
+    backend.open(SerialConfig("COM7"))
+    connection.close_error = FakeSerialException("cable removed")
+
+    with pytest.raises(CommunicationError, match="serial close failed"):
+        backend.close()
+    assert not backend.is_open
+    backend.close()  # idempotent after failure

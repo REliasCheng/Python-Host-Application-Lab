@@ -32,11 +32,14 @@ class PySerialBackend(SerialBackend):
         return serial, list_ports
 
     def available_ports(self) -> list[SerialPortInfo]:
-        _, list_ports = self._modules()
-        return [
-            SerialPortInfo(item.device, item.description or "", item.hwid or "")
-            for item in list_ports.comports()
-        ]
+        serial, list_ports = self._modules()
+        try:
+            return [
+                SerialPortInfo(item.device, item.description or "", item.hwid or "")
+                for item in list_ports.comports()
+            ]
+        except (serial.SerialException, OSError) as exc:
+            raise CommunicationError(f"could not list serial ports: {exc}") from exc
 
     def open(self, config: SerialConfig) -> None:
         serial, _ = self._modules()
@@ -48,14 +51,17 @@ class PySerialBackend(SerialBackend):
                 timeout=config.read_timeout,
                 write_timeout=config.read_timeout,
             )
-        except (serial.SerialException, ValueError) as exc:
+        except (serial.SerialException, OSError, ValueError) as exc:
             self._serial = None
             raise CommunicationError(f"could not open {config.port}: {exc}") from exc
 
     def close(self) -> None:
-        if self._serial is not None:
+        connection = self._serial
+        if connection is not None:
             try:
-                self._serial.close()
+                connection.close()
+            except Exception as exc:
+                raise CommunicationError(f"serial close failed: {exc}") from exc
             finally:
                 self._serial = None
 
@@ -68,7 +74,7 @@ class PySerialBackend(SerialBackend):
             return int(connection.write(payload))
         except serial.SerialTimeoutException as exc:
             raise CommunicationTimeout("serial write timed out") from exc
-        except serial.SerialException as exc:
+        except (serial.SerialException, OSError) as exc:
             raise CommunicationError(f"serial write failed: {exc}") from exc
 
     def read(self, max_bytes: int, timeout: float) -> bytes:
@@ -80,9 +86,9 @@ class PySerialBackend(SerialBackend):
             raise ValueError("max_bytes must be positive")
         if timeout < 0:
             raise ValueError("timeout must not be negative")
-        connection.timeout = timeout
         try:
+            connection.timeout = timeout
             return bytes(connection.read(max_bytes))
-        except serial.SerialException as exc:
+        except (serial.SerialException, OSError) as exc:
             raise CommunicationError(f"serial read failed: {exc}") from exc
 
