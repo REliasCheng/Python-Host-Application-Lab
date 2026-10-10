@@ -3,10 +3,7 @@
 import argparse
 import sys
 
-from PyQt5.QtWidgets import QApplication
-
 from host_app.communication.mock_serial import MockSerialBackend
-from host_app.gui.main_window import MainWindow
 
 
 class DemoMockSerialBackend(MockSerialBackend):
@@ -22,6 +19,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Python serial host application")
     parser.add_argument("--mock", action="store_true", help="run GUI with in-memory MOCK0 (no hardware)")
     args = parser.parse_args(argv)
+    try:
+        from PyQt5.QtWidgets import QApplication
+
+        from host_app.gui.main_window import MainWindow
+    except ModuleNotFoundError as exc:
+        if exc.name != "PyQt5" and not (exc.name or "").startswith("PyQt5."):
+            raise
+        print('GUI dependency missing: install with pip install ".[gui,serial]"', file=sys.stderr)
+        return 2
     application = QApplication([sys.argv[0]])
     window = MainWindow(DemoMockSerialBackend() if args.mock else None)
     if args.mock:
