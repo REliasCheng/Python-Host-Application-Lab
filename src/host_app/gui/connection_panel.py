@@ -39,12 +39,19 @@ class ConnectionPanel(QWidget):
         self.set_state(self._state)
 
     def set_ports(self, ports: list[SerialPortInfo]) -> None:
-        current = self.port_combo.currentText().strip()
+        index = self.port_combo.currentIndex()
+        displayed = self.port_combo.currentText().strip()
+        selected = self.port_combo.currentData() if index >= 0 and displayed == self.port_combo.itemText(index) else None
+        current = str(selected) if selected is not None else displayed
         self.port_combo.clear()
         for port in ports:
             self.port_combo.addItem(port.display_name, port.port)
-        if current and self.port_combo.findData(current) < 0:
+        known = self.port_combo.findData(current)
+        if known >= 0:
+            self.port_combo.setCurrentIndex(known)
+        elif current:
             self.port_combo.addItem(current, current)
+            self.port_combo.setCurrentIndex(self.port_combo.count() - 1)
 
     def set_state(self, state: ConnectionState, detail: str = "") -> None:
         self._state = state
@@ -70,7 +77,10 @@ class ConnectionPanel(QWidget):
         if self._state == ConnectionState.CONNECTED:
             self.disconnect_requested.emit()
             return
-        port = self.port_combo.currentData() or self.port_combo.currentText().strip()
+        index = self.port_combo.currentIndex()
+        displayed = self.port_combo.currentText().strip()
+        selected = self.port_combo.currentData() if index >= 0 and displayed == self.port_combo.itemText(index) else None
+        port = selected if selected is not None else displayed
         try:
             baudrate = int(self.baud_combo.currentText())
         except ValueError:

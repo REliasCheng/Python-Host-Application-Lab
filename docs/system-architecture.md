@@ -14,7 +14,7 @@
 | Communication | 抽象后端、Mock 行为、可选真实串口适配 | `host_app.communication` |
 | Models | 连接状态、端口信息、终端消息 | `host_app.models` |
 
-依赖方向从 GUI 指向核心接口；核心不导入 PyQt5 或 pyserial。`PySerialBackend` 在运行时才加载 pyserial，因此主机测试无需 GUI 或串口依赖。
+依赖方向从 GUI 指向核心接口；核心不导入 PyQt5 或 pyserial。`MainWindow` 接受注入的 `SerialBackend`，`host-app --mock` 使用会明确标记响应的内存后端。`PySerialBackend` 在运行时才加载 pyserial，因此纯核心测试无需 GUI 或串口依赖。GUI 连接配置使用 `read_timeout=0.0`，避免定时轮询因串口等待占住 Qt 事件循环；真实设备上的吞吐和时延尚未验证。
 
 ## Connection Lifecycle
 

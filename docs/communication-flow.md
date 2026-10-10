@@ -47,7 +47,7 @@ Command text
 | Expected read timeout | 返回空消息列表，保持连接状态 |
 | Backend disconnect | 抛出通信错误并进入 `ERROR` |
 | Decode or line-length failure | 抛出协议错误并进入 `ERROR` |
-| Explicit disconnect | 关闭后端、重置解析器并进入 `DISCONNECTED` |
+| Explicit disconnect | 关闭后端、重置解析器并进入 `DISCONNECTED`；底层关闭异常归一化为 `CommunicationError`，GUI 呈现错误后仍可重连 |
 
 Mock 后端对超时和断连路径提供了自动化测试证据；真实设备上的电气、驱动和热插拔行为尚未验证。
 
