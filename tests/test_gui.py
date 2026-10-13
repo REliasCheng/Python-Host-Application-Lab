@@ -97,3 +97,23 @@ def test_visible_mock_demo_replies_without_hardware(qt_app: QApplication) -> Non
     window.poll_serial()
     assert "[RX] MOCK ACK: status" in window.terminal.output.toPlainText()
     window.close()
+
+
+def test_gui_displays_completed_message_before_protocol_error(qt_app: QApplication) -> None:
+    backend = MockSerialBackend()
+    window = MainWindow(backend)
+    errors: list[str] = []
+    window._show_error = errors.append  # type: ignore[method-assign]
+    window.connect_serial("MOCK0", 115200)
+    backend.queue_receive(b"ready\n\xff\n")
+    window.poll_serial()
+    assert window.application.state == ConnectionState.ERROR
+    assert [message.text for message in window.application.messages] == ["ready"]
+    assert window.terminal.output.toPlainText().count("[RX] ready") == 1
+    assert len(errors) == 1
+    window.disconnect_serial()
+    window.connect_serial("MOCK0", 115200)
+    backend.queue_receive(b"fresh\n")
+    window.poll_serial()
+    assert "[RX] fresh" in window.terminal.output.toPlainText()
+    window.close()

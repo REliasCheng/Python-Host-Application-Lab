@@ -93,6 +93,8 @@ class HostApplication:
         try:
             lines = self._parser.feed(payload)
         except ProtocolError as exc:
+            completed = getattr(exc, "completed_lines", [])
+            self.messages.extend(TerminalMessage(MessageDirection.RX, line) for line in completed)
             self.connection.fail(exc)
             raise
         messages = [TerminalMessage(MessageDirection.RX, line) for line in lines]

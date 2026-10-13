@@ -6,6 +6,7 @@ from host_app.core.config import SerialConfig
 from host_app.core.errors import (
     CommunicationError,
     DisconnectedError,
+    LineTooLongError,
     ProtocolDecodeError,
 )
 from host_app.models.connection import ConnectionState
@@ -127,6 +128,34 @@ def test_close_failure_is_recoverable() -> None:
     app.connect(SerialConfig("MOCK0"))
     assert app.state == ConnectionState.CONNECTED
     app.disconnect()
+
+
+@pytest.mark.parametrize("payload", [b"ok\n12345\n", b"ok\n\xff\n", b"12345\nok\n"])
+def test_poll_saves_completed_lines_before_protocol_failure(payload: bytes) -> None:
+    backend = MockSerialBackend()
+    app = HostApplication(backend)
+    app.connect(SerialConfig("MOCK0", max_line_bytes=4))
+    backend.queue_receive(payload)
+    with pytest.raises((ProtocolDecodeError, LineTooLongError)) as caught:
+        app.poll()
+    assert caught.value.completed_lines == ["ok"]
+    assert [message.text for message in app.messages] == ["ok"]
+    assert app.state == ConnectionState.ERROR
+    app.disconnect()
+    app.connect(SerialConfig("MOCK0", max_line_bytes=4))
+    backend.queue_receive(b"new\n")
+    assert [message.text for message in app.poll()] == ["new"]
+
+
+def test_poll_saves_multiple_valid_lines_across_multiple_errors() -> None:
+    backend = MockSerialBackend()
+    app = HostApplication(backend)
+    app.connect(SerialConfig("MOCK0", max_line_bytes=4))
+    backend.queue_receive(b"a\n12345\nb\n\xff\nc\n")
+    with pytest.raises(LineTooLongError) as caught:
+        app.poll()
+    assert len(caught.value.frame_errors) == 2
+    assert [message.text for message in app.messages] == ["a", "b", "c"]
 
 
 @pytest.mark.parametrize(
