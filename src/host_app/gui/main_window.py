@@ -77,10 +77,13 @@ class MainWindow(QMainWindow):
     def poll_serial(self) -> None:
         if self.application.state != ConnectionState.CONNECTED:
             return
+        previous_count = len(self.application.messages)
         try:
             for message in self.application.poll():
                 self.terminal.append_message(message)
         except HostApplicationError as exc:
+            for message in self.application.messages[previous_count:]:
+                self.terminal.append_message(message)
             self._show_error(str(exc))
             self._update_state()
 

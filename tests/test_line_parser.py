@@ -57,3 +57,43 @@ def test_parser_validates_configuration_and_input_type() -> None:
     parser.reset()
     assert parser.buffered_bytes == 0
 
+
+@pytest.mark.parametrize(
+    ("chunk", "error_type", "completed"),
+    [
+        (b"12345\nok\n", LineTooLongError, ["ok"]),
+        (b"ok\n12345\n", LineTooLongError, ["ok"]),
+        (b"ok\n\xff\n", ProtocolDecodeError, ["ok"]),
+        (b"\xff\nok\n", ProtocolDecodeError, ["ok"]),
+        (b"12345\n\xff\nok\n67890\n", LineTooLongError, ["ok"]),
+    ],
+)
+def test_errors_consume_entire_chunk_and_deliver_completed_lines(
+    chunk: bytes, error_type: type[Exception], completed: list[str]
+) -> None:
+    parser = LineParser(max_line_bytes=4)
+    with pytest.raises(error_type) as caught:
+        parser.feed(chunk)
+    assert caught.value.completed_lines == completed
+    assert parser.feed(b"next\n") == ["next"]
+
+
+def test_split_utf8_empty_crlf_and_multiple_error_metadata() -> None:
+    parser = LineParser(max_line_bytes=4)
+    assert parser.feed(b"\xc3") == []
+    assert parser.feed(b"\xa9\n\r\n") == ["é", ""]
+    with pytest.raises(LineTooLongError) as caught:
+        parser.feed(b"12345\n\xff\n45678\ngood\n")
+    assert caught.value.completed_lines == ["good"]
+    assert len(caught.value.frame_errors) == 3
+    assert isinstance(caught.value.frame_errors[1], ProtocolDecodeError)
+    assert parser.feed(b"ok\n") == ["ok"]
+
+
+def test_overlong_frame_split_across_chunks_discards_through_lf() -> None:
+    parser = LineParser(max_line_bytes=4)
+    assert parser.feed(b"1234") == []
+    with pytest.raises(LineTooLongError):
+        parser.feed(b"5abc")
+    assert parser.feed(b"more\nOK\n") == ["OK"]
+

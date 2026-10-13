@@ -2,7 +2,7 @@
 
 import codecs
 
-from host_app.core.errors import LineTooLongError, ProtocolDecodeError
+from host_app.core.errors import LineTooLongError, ProtocolDecodeError, ProtocolError
 
 
 class LineParser:
@@ -32,6 +32,7 @@ class LineParser:
         if not isinstance(data, bytes):
             raise TypeError("data must be bytes")
         lines: list[str] = []
+        errors: list[ProtocolError] = []
         for value in data:
             if self._discarding:
                 if value == 0x0A:
@@ -45,16 +46,22 @@ class LineParser:
                 try:
                     lines.append(payload.decode(self.encoding, errors="strict"))
                 except UnicodeDecodeError as exc:
-                    raise ProtocolDecodeError(
-                        f"received line is not valid {self.encoding}"
-                    ) from exc
+                    error = ProtocolDecodeError(f"received line is not valid {self.encoding}")
+                    error.__cause__ = exc
+                    errors.append(error)
                 continue
             if len(self._buffer) >= self.max_line_bytes:
                 self._buffer.clear()
                 self._discarding = True
-                raise LineTooLongError(
+                errors.append(LineTooLongError(
                     f"received line exceeds {self.max_line_bytes} bytes"
-                )
+                ))
+                continue
             self._buffer.append(value)
+        if errors:
+            first = errors[0]
+            first.completed_lines = lines
+            first.frame_errors = tuple(errors)
+            raise first
         return lines
 

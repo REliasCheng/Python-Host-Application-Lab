@@ -22,7 +22,15 @@ class DisconnectedError(CommunicationError):
 
 
 class ProtocolError(HostApplicationError):
-    """Base class for line and command protocol errors."""
+    """Base class for line and command protocol errors.
+
+    A feed error may carry completed_lines and frame_errors. The parser consumes
+    the entire supplied chunk before raising, and these lines must be delivered
+    exactly once by the caller.
+    """
+
+    completed_lines: list[str]
+    frame_errors: tuple["ProtocolError", ...]
 
 
 class ProtocolDecodeError(ProtocolError):
