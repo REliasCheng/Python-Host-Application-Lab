@@ -130,6 +130,46 @@ def test_close_failure_is_recoverable() -> None:
     app.disconnect()
 
 
+def test_close_failure_with_open_backend_keeps_error_state_until_retry() -> None:
+    class CloseFailsOpenOnce(MockSerialBackend):
+        failures = 1
+
+        def close(self) -> None:
+            if self.failures:
+                self.failures -= 1
+                raise CommunicationError("port remains open")
+            super().close()
+
+    backend = CloseFailsOpenOnce()
+    app = HostApplication(backend)
+    app.connect(SerialConfig("MOCK0"))
+    with pytest.raises(CommunicationError, match="port remains open"):
+        app.disconnect()
+    assert backend.is_open
+    assert app.state == ConnectionState.ERROR
+    with pytest.raises(DisconnectedError):
+        app.send_command("status")
+    assert backend.sent_data == ()
+
+    app.disconnect()
+    assert app.state == ConnectionState.DISCONNECTED
+    assert not backend.is_open
+
+
+def test_close_that_returns_without_closing_reports_error() -> None:
+    class CloseDoesNotClose(MockSerialBackend):
+        def close(self) -> None:
+            pass
+
+    backend = CloseDoesNotClose()
+    app = HostApplication(backend)
+    app.connect(SerialConfig("MOCK0"))
+    with pytest.raises(CommunicationError, match="closed state"):
+        app.disconnect()
+    assert app.state == ConnectionState.ERROR
+    assert backend.is_open
+
+
 @pytest.mark.parametrize("payload", [b"ok\n12345\n", b"ok\n\xff\n", b"12345\nok\n"])
 def test_poll_saves_completed_lines_before_protocol_failure(payload: bytes) -> None:
     backend = MockSerialBackend()

@@ -28,8 +28,11 @@ class FakeConnection:
         self.write_error: Exception | None = None
         self.read_error: Exception | None = None
         self.close_error: Exception | None = None
+        self.close_stays_open_on_error = False
 
     def close(self) -> None:
+        if self.close_error is not None and self.close_stays_open_on_error:
+            raise self.close_error
         self.is_open = False
         if self.close_error is not None:
             raise self.close_error
@@ -142,3 +145,20 @@ def test_close_failure_is_normalized_and_releases_adapter(
         backend.close()
     assert not backend.is_open
     backend.close()  # idempotent after failure
+
+
+def test_close_failure_preserves_still_open_connection_for_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection, _ = install_fake_modules(monkeypatch)
+    backend = PySerialBackend()
+    backend.open(SerialConfig("COM7"))
+    connection.close_error = FakeSerialException("close blocked")
+    connection.close_stays_open_on_error = True
+
+    with pytest.raises(CommunicationError, match="serial close failed"):
+        backend.close()
+    assert backend.is_open
+    connection.close_error = None
+    backend.close()
+    assert not backend.is_open
