@@ -61,9 +61,12 @@ class PySerialBackend(SerialBackend):
             try:
                 connection.close()
             except Exception as exc:
+                if not connection.is_open:
+                    self._serial = None
                 raise CommunicationError(f"serial close failed: {exc}") from exc
-            finally:
-                self._serial = None
+            if connection.is_open:
+                raise CommunicationError("serial close did not enter the closed state")
+            self._serial = None
 
     def write(self, payload: bytes) -> int:
         serial, _ = self._modules()

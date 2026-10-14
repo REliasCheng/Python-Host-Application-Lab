@@ -52,9 +52,20 @@ class HostApplication:
     def disconnect(self) -> None:
         try:
             self.backend.close()
-        finally:
+        except Exception as exc:
             self._parser.reset()
-            self.connection.disconnect()
+            if self.backend.is_open:
+                self.connection.fail(exc)
+            else:
+                self.connection.disconnect()
+            raise
+        if self.backend.is_open:
+            error = CommunicationError("backend did not enter the closed state")
+            self._parser.reset()
+            self.connection.fail(error)
+            raise error
+        self._parser.reset()
+        self.connection.disconnect()
 
     def send_command(self, command: str) -> TerminalMessage:
         config = self._connected_config()
