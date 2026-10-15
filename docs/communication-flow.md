@@ -27,13 +27,14 @@ Enumerate ports
 ```text
 Command text
   → reject empty or malformed command
-  → normalize shell-style arguments
+  → normalize shell-style arguments while preserving quoted argument boundaries
   → encode as UTF-8
   → append CRLF
   → backend write
 ```
 
 这是一条通用行式文本通道，不是 Modbus、CAN、MQTT、BLE 或自定义二进制帧协议。命令语法只定义名称和参数边界，不赋予设备特定语义。
+含空格或空字符串的参数在发送时会保留 shell 风格引号；接收端需要采用兼容的参数解析规则，才能恢复相同的参数边界。
 
 ## Receive
 

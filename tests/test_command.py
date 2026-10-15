@@ -32,6 +32,12 @@ def test_encode_command_normalizes_and_appends_terminator() -> None:
     assert encode_command('  set mode "safe"  ') == b"set mode safe\r\n"
 
 
+@pytest.mark.parametrize("text", ['set label "motor one"', 'set label ""', 'set label "a\\\"b"'])
+def test_encode_command_preserves_argument_boundaries(text: str) -> None:
+    payload = encode_command(text)
+    assert parse_command(payload.decode("utf-8").removesuffix("\r\n")) == parse_command(text)
+
+
 def test_encode_command_rejects_line_break_encoding_and_size_errors() -> None:
     with pytest.raises(InvalidCommandError):
         encode_command("status\nreset")
