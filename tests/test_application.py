@@ -11,6 +11,7 @@ from host_app.core.errors import (
 )
 from host_app.models.connection import ConnectionState
 from host_app.models.message import MessageDirection
+from host_app.protocol.command import parse_command
 
 
 def test_application_connect_send_receive_disconnect() -> None:
@@ -34,6 +35,16 @@ def test_application_connect_send_receive_disconnect() -> None:
     app.disconnect()
     assert app.state == ConnectionState.DISCONNECTED
     assert not backend.is_open
+
+
+def test_application_preserves_quoted_arguments_on_wire() -> None:
+    backend = MockSerialBackend()
+    app = HostApplication(backend)
+    app.connect(SerialConfig("MOCK0"))
+    app.send_command('set label "motor one"')
+
+    wire = backend.sent_data[0].decode("utf-8").removesuffix("\r\n")
+    assert parse_command(wire).arguments == ("label", "motor one")
 
 
 def test_timeout_is_nonfatal() -> None:

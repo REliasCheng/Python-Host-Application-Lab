@@ -52,7 +52,7 @@ def encode_command(
     if "\r" in text or "\n" in text:
         raise InvalidCommandError("command must not contain line breaks")
     parsed = parse_command(text)
-    normalized = " ".join((parsed.name, *parsed.arguments))
+    normalized = shlex.join((parsed.name, *parsed.arguments))
     try:
         payload = f"{normalized}{line_ending}".encode(encoding, errors="strict")
     except UnicodeEncodeError as exc:
