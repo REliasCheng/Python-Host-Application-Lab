@@ -117,3 +117,34 @@ def test_gui_displays_completed_message_before_protocol_error(qt_app: QApplicati
     window.poll_serial()
     assert "[RX] fresh" in window.terminal.output.toPlainText()
     window.close()
+
+
+def test_failed_gui_send_keeps_command_for_retry(qt_app: QApplication) -> None:
+    class WriteFailsOnce(MockSerialBackend):
+        failures = 1
+
+        def write(self, payload: bytes) -> int:
+            if self.failures:
+                self.failures -= 1
+                raise CommunicationError("mock write failed")
+            return super().write(payload)
+
+    backend = WriteFailsOnce()
+    window = MainWindow(backend)
+    errors: list[str] = []
+    window._show_error = errors.append  # type: ignore[method-assign]
+    window.connect_serial("MOCK0", 115200)
+    window.terminal.command.setText("status")
+    window.terminal._emit_command()
+
+    assert errors == ["mock write failed"]
+    assert window.application.state == ConnectionState.ERROR
+    assert window.terminal.command.text() == "status"
+    assert backend.sent_data == ()
+
+    window.disconnect_serial()
+    window.connect_serial("MOCK0", 115200)
+    window.terminal._emit_command()
+    assert backend.sent_data == (b"status\r\n",)
+    assert window.terminal.command.text() == ""
+    window.close()

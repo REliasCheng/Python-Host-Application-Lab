@@ -50,5 +50,4 @@ class TerminalView(QWidget):
         text = self.command.text().strip()
         if text:
             self.send_requested.emit(text)
-            self.command.clear()
 

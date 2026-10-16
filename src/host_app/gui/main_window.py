@@ -70,6 +70,7 @@ class MainWindow(QMainWindow):
     def send_command(self, command: str) -> None:
         try:
             self.terminal.append_message(self.application.send_command(command))
+            self.terminal.command.clear()
         except HostApplicationError as exc:
             self._show_error(str(exc))
             self._update_state()
