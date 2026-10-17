@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from host_app.communication.mock_serial import MockSerialBackend
@@ -35,6 +37,22 @@ def test_application_connect_send_receive_disconnect() -> None:
     app.disconnect()
     assert app.state == ConnectionState.DISCONNECTED
     assert not backend.is_open
+
+
+def test_transcript_jsonl_preserves_direction_and_unicode() -> None:
+    backend = MockSerialBackend()
+    app = HostApplication(backend)
+    assert app.transcript_jsonl() == ""
+    app.connect(SerialConfig("MOCK0"))
+    app.send_command("status")
+    backend.queue_receive("温度=20\r值\n".encode())
+    app.poll()
+
+    lines = app.transcript_jsonl().splitlines()
+    assert [json.loads(line) for line in lines] == [
+        {"direction": "tx", "text": "status"},
+        {"direction": "rx", "text": "温度=20\r值"},
+    ]
 
 
 def test_application_preserves_quoted_arguments_on_wire() -> None:

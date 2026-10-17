@@ -1,5 +1,7 @@
 """Hardware-independent application coordinator."""
 
+import json
+
 from host_app.communication.interface import SerialBackend
 from host_app.core.config import SerialConfig
 from host_app.core.errors import (
@@ -32,6 +34,16 @@ class HostApplication:
 
     def available_ports(self) -> list[SerialPortInfo]:
         return self.backend.available_ports()
+
+    def transcript_jsonl(self) -> str:
+        """Serialize observed TX/RX messages without inventing device timestamps."""
+        return "".join(
+            json.dumps(
+                {"direction": message.direction.value, "text": message.text},
+                ensure_ascii=False,
+            ) + "\n"
+            for message in self.messages
+        )
 
     def connect(self, config: SerialConfig) -> None:
         self.connection.transition(ConnectionState.CONNECTING)

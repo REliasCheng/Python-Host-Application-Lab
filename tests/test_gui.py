@@ -1,6 +1,8 @@
 """Real Qt widgets exercised with the original in-memory serial backend."""
 
+import json
 import os
+from pathlib import Path
 
 import pytest
 
@@ -147,4 +149,45 @@ def test_failed_gui_send_keeps_command_for_retry(qt_app: QApplication) -> None:
     window.terminal._emit_command()
     assert backend.sent_data == (b"status\r\n",)
     assert window.terminal.command.text() == ""
+    window.close()
+
+
+def test_gui_exports_session_transcript_without_hardware(
+    qt_app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backend = MockSerialBackend()
+    window = MainWindow(backend)
+    window.connect_serial("MOCK0", 115200)
+    window.send_command("status")
+    backend.queue_receive(b"ready\n")
+    window.poll_serial()
+
+    target = tmp_path / "session.jsonl"
+    monkeypatch.setattr(
+        "host_app.gui.main_window.QFileDialog.getSaveFileName",
+        lambda *args: (str(target), "JSON Lines"),
+    )
+    window.export_action.trigger()
+    assert [json.loads(line) for line in target.read_text(encoding="utf-8").splitlines()] == [
+        {"direction": "tx", "text": "status"},
+        {"direction": "rx", "text": "ready"},
+    ]
+    window.close()
+
+
+def test_gui_export_failure_is_reported_without_creating_file(
+    qt_app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    window = MainWindow(MockSerialBackend())
+    errors: list[str] = []
+    window._show_error = errors.append  # type: ignore[method-assign]
+    target = tmp_path / "missing-directory" / "session.jsonl"
+    monkeypatch.setattr(
+        "host_app.gui.main_window.QFileDialog.getSaveFileName",
+        lambda *args: (str(target), "JSON Lines"),
+    )
+    window.export_action.trigger()
+    assert len(errors) == 1
+    assert errors[0].startswith("could not export transcript:")
+    assert not target.exists()
     window.close()
