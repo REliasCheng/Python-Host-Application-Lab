@@ -60,6 +60,8 @@ SerialBackend.read
 
 GUI 使用 50 ms `QTimer` 在 Qt 主线程轮询核心，未创建后台线程，也不会从 worker 直接修改 widget。该实现适合低吞吐命令终端实验；高吞吐设备、长耗时操作和生产级并发模型不在当前验证范围内。
 
+`HostApplication.transcript_jsonl()` 只序列化已记录的 TX/RX 消息；GUI 使用 Qt 的 `QSaveFile` 写出 UTF-8 文件。导出不包含凭空生成的时间戳或设备确认状态，保存失败会保留错误供界面提示。
+
 ## Hardware Boundary
 
 `PySerialBackend` 实现端口枚举、打开、关闭、读写和超时映射，但未使用真实设备验证。仓库没有声明设备兼容性、持续运行稳定性或特定 MCU 协议支持。

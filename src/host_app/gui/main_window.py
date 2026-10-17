@@ -1,8 +1,15 @@
 """Minimal GUI composition around the hardware-independent core."""
 
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QIODevice, QSaveFile, QTimer
 from PyQt5.QtGui import QCloseEvent
-from PyQt5.QtWidgets import QMainWindow, QMessageBox, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (
+    QAction,
+    QFileDialog,
+    QMainWindow,
+    QMessageBox,
+    QVBoxLayout,
+    QWidget,
+)
 
 from host_app.communication.interface import SerialBackend
 from host_app.communication.pyserial_adapter import PySerialBackend
@@ -29,6 +36,16 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.connection_panel)
         layout.addWidget(self.terminal)
         self.setCentralWidget(central)
+
+        self.export_action = QAction("Export transcript…", self)
+        self.export_action.triggered.connect(self._choose_transcript_path)
+        menu_bar = self.menuBar()
+        if menu_bar is None:
+            raise RuntimeError("Qt menu bar is unavailable")
+        file_menu = menu_bar.addMenu("File")
+        if file_menu is None:
+            raise RuntimeError("Qt File menu is unavailable")
+        file_menu.addAction(self.export_action)
 
         self.connection_panel.refresh_requested.connect(self.refresh_ports)
         self.connection_panel.connect_requested.connect(self.connect_serial)
@@ -74,6 +91,29 @@ class MainWindow(QMainWindow):
         except HostApplicationError as exc:
             self._show_error(str(exc))
             self._update_state()
+
+    def _choose_transcript_path(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export transcript", "session.jsonl", "JSON Lines (*.jsonl);;All Files (*)"
+        )
+        if not path:
+            return
+        try:
+            self.export_transcript(path)
+        except OSError as exc:
+            self._show_error(str(exc))
+
+    def export_transcript(self, path: str) -> None:
+        payload = self.application.transcript_jsonl().encode("utf-8")
+        output = QSaveFile(path)
+        if not output.open(QIODevice.OpenModeFlag.WriteOnly):
+            raise OSError(f"could not export transcript: {output.errorString()}")
+        if output.write(payload) != len(payload):
+            detail = output.errorString()
+            output.cancelWriting()
+            raise OSError(f"could not export transcript: {detail}")
+        if not output.commit():
+            raise OSError(f"could not export transcript: {output.errorString()}")
 
     def poll_serial(self) -> None:
         if self.application.state != ConnectionState.CONNECTED:
