@@ -1,4 +1,5 @@
 import json
+import math
 
 import pytest
 
@@ -243,4 +244,38 @@ def test_poll_saves_multiple_valid_lines_across_multiple_errors() -> None:
 def test_serial_config_validation(changes: dict[str, object]) -> None:
     with pytest.raises(ValueError):
         SerialConfig(**changes)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("baudrate", math.nan),
+        ("baudrate", math.inf),
+        ("baudrate", 1.5),
+        ("baudrate", True),
+        ("read_size", math.nan),
+        ("read_size", math.inf),
+        ("read_size", 1.5),
+        ("read_size", True),
+        ("max_line_bytes", math.nan),
+        ("max_line_bytes", math.inf),
+        ("max_line_bytes", 1.5),
+        ("max_line_bytes", True),
+        ("read_timeout", math.nan),
+        ("read_timeout", math.inf),
+        ("read_timeout", -math.inf),
+        ("read_timeout", True),
+    ],
+)
+def test_serial_config_rejects_nonfinite_or_nonintegral_limits(
+    field: str, value: object
+) -> None:
+    with pytest.raises(ValueError):
+        SerialConfig("MOCK0", **{field: value})  # type: ignore[arg-type]
+
+
+def test_serial_config_accepts_finite_boundaries() -> None:
+    config = SerialConfig("MOCK0", baudrate=1, read_size=1, max_line_bytes=1,
+                          read_timeout=0)
+    assert config.read_timeout == 0
 

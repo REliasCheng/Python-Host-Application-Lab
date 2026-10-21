@@ -27,8 +27,8 @@ host-app --mock
 
 | Layer | Result | Evidence |
 | --- | --- | --- |
-| Host Test | PASSED locally | Python 3.10.11，45 / 45 tests passed；新 PR 的远端 CI 尚需按 SHA 核实 |
-| Core Coverage | PASSED | 96.98% statement / branch-aware combined coverage；要求至少 80% |
+| Host Test | PASSED locally | 2026-10-21 Python 3.10.11，86 / 86 tests passed；新 PR 的远端 CI 尚需按 SHA 核实 |
+| Core Coverage | PASSED locally | 2026-10-21，97.84% statement / branch-aware combined coverage；要求至少 80% |
 | Ruff | PASSED | 源码与测试检查无问题 |
 | Mypy | PASSED | 22 个源文件检查无问题 |
 | Protocol Test | PASSED | 分段行、CRLF / LF、无效编码、超长行与命令校验 |

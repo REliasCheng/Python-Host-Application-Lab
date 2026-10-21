@@ -1,6 +1,7 @@
 """Validated configuration models for serial communication."""
 
 import codecs
+import math
 from dataclasses import dataclass
 
 
@@ -19,8 +20,10 @@ class SerialConfig:
     def __post_init__(self) -> None:
         if not self.port.strip():
             raise ValueError("port must not be empty")
-        if self.baudrate <= 0:
-            raise ValueError("baudrate must be positive")
+        for name in ("baudrate", "read_size", "max_line_bytes"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"{name} must be a positive integer")
         if not self.encoding.strip():
             raise ValueError("encoding must not be empty")
         try:
@@ -29,10 +32,12 @@ class SerialConfig:
             raise ValueError(f"unknown encoding: {self.encoding}") from exc
         if self.line_ending not in {"\n", "\r\n"}:
             raise ValueError("line_ending must be LF or CRLF")
-        if self.read_size <= 0:
-            raise ValueError("read_size must be positive")
-        if self.read_timeout < 0:
-            raise ValueError("read_timeout must not be negative")
-        if self.max_line_bytes <= 0:
-            raise ValueError("max_line_bytes must be positive")
+        timeout = self.read_timeout
+        if (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, (int, float))
+            or (isinstance(timeout, float) and not math.isfinite(timeout))
+            or timeout < 0
+        ):
+            raise ValueError("read_timeout must be finite and nonnegative")
 
