@@ -133,8 +133,8 @@ File → Export transcript 可保存本次应用已记录的消息。每行包�
 
 | Verification Layer | Status | Evidence Boundary |
 | --- | --- | --- |
-| Host Test | PASSED locally | Python 3.10.11 下 45 项 pytest 全部通过；PR CI 以对应 SHA 为准 |
-| Core Coverage | PASSED | 核心、协议、模型和 Mock 通信模块覆盖率 96.98%，门槛为 80% |
+| Host Test | PASSED locally | 2026-10-21 Python 3.10.11 下 86 项 pytest 全部通过；PR CI 以对应 SHA 为准 |
+| Core Coverage | PASSED locally | 2026-10-21 核心、协议、模型和 Mock 通信模块覆盖率 97.84%，门槛为 80%；远端 CI 以实际运行结果为准 |
 | Static Analysis | PASSED | Ruff 检查源码与测试；Mypy 检查 22 个源文件 |
 | Build Verification | PASSED locally | 当前源码在隔离临时目录生成 sdist 与 wheel，Wheel 安装后运行 Mock GUI smoke |
 | GUI Launch | PASSED locally | Qt 离屏窗口完成 `MOCK0` 连接、收发、断开及重连；未连接真实设备 |
