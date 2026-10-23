@@ -91,6 +91,34 @@ def test_gui_disconnect_exception_is_reported_and_recoverable(qt_app: QApplicati
     window.close()
 
 
+def test_window_stays_open_when_port_close_fails(qt_app: QApplication) -> None:
+    class CloseFailsOpenOnce(MockSerialBackend):
+        failures = 1
+
+        def close(self) -> None:
+            if self.failures:
+                self.failures -= 1
+                raise CommunicationError("port remains open")
+            super().close()
+
+    backend = CloseFailsOpenOnce()
+    window = MainWindow(backend)
+    errors: list[str] = []
+    window._show_error = errors.append  # type: ignore[method-assign]
+    window.show()
+    qt_app.processEvents()
+    window.connect_serial("MOCK0", 115200)
+
+    assert not window.close()
+    assert window.isVisible()
+    assert backend.is_open
+    assert window.application.state == ConnectionState.ERROR
+    assert errors == ["port remains open"]
+
+    assert window.close()
+    assert not backend.is_open
+
+
 def test_visible_mock_demo_replies_without_hardware(qt_app: QApplication) -> None:
     backend = DemoMockSerialBackend()
     window = MainWindow(backend)

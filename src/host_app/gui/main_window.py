@@ -129,11 +129,16 @@ class MainWindow(QMainWindow):
             self._update_state()
 
     def closeEvent(self, event: QCloseEvent | None) -> None:
-        self.poll_timer.stop()
         try:
             self.application.disconnect()
         except HostApplicationError as exc:
             self._show_error(str(exc))
+            if self.application.backend.is_open:
+                self._update_state()
+                if event is not None:
+                    event.ignore()
+                return
+        self.poll_timer.stop()
         if event is not None:
             event.accept()
 
