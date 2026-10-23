@@ -32,6 +32,30 @@ def test_parser_accepts_exact_boundary() -> None:
     assert parser.feed(b"1234\n") == ["1234"]
 
 
+def test_parser_accepts_exact_boundary_with_crlf_across_chunks() -> None:
+    parser = LineParser(max_line_bytes=4)
+
+    assert parser.feed(b"1234\r") == []
+    assert parser.feed(b"\n") == ["1234"]
+
+
+def test_parser_rejects_overlong_crlf_and_recovers() -> None:
+    parser = LineParser(max_line_bytes=4)
+
+    with pytest.raises(LineTooLongError):
+        parser.feed(b"12345\r\n")
+    assert parser.feed(b"ok\r\n") == ["ok"]
+
+
+def test_parser_rejects_cr_that_is_not_followed_by_lf_at_boundary() -> None:
+    parser = LineParser(max_line_bytes=4)
+
+    assert parser.feed(b"1234\r") == []
+    with pytest.raises(LineTooLongError):
+        parser.feed(b"x\n")
+    assert parser.feed(b"ok\n") == ["ok"]
+
+
 def test_parser_drops_overlong_line_and_recovers() -> None:
     parser = LineParser(max_line_bytes=4)
 

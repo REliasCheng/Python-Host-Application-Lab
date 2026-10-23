@@ -51,6 +51,11 @@ class LineParser:
                     errors.append(error)
                 continue
             if len(self._buffer) >= self.max_line_bytes:
+                # A trailing CR belongs to the CRLF delimiter, provided the
+                # next byte is LF. Keep it across feed() calls until known.
+                if value == 0x0D and len(self._buffer) == self.max_line_bytes:
+                    self._buffer.append(value)
+                    continue
                 self._buffer.clear()
                 self._discarding = True
                 errors.append(LineTooLongError(

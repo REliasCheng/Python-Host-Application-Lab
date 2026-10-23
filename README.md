@@ -41,7 +41,7 @@ Mock Backend   pyserial Adapter
 
 - `HostApplication` 协调连接、发送、轮询和错误状态，不直接依赖 Qt。
 - `ConnectionStateMachine` 明确区分 `DISCONNECTED`、`CONNECTING`、`CONNECTED` 和 `ERROR`。
-- `LineParser` 处理分段输入、CRLF / LF、严格解码和行长度上限。
+- `LineParser` 处理分段输入、CRLF / LF、严格解码和行长度上限；接收上限按正文的字节数计算，不计行尾 CRLF。
 - `SerialBackend` 让测试使用确定性的内存后端，真实串口通过可选适配器接入。
 
 详见 [System Architecture](docs/system-architecture.md) 与 [Communication Flow](docs/communication-flow.md)。
