@@ -22,13 +22,23 @@ class FakeSerialTimeoutException(FakeSerialException):
 class FakeConnection:
     def __init__(self) -> None:
         self.is_open = True
-        self.timeout = 0.0
+        self._timeout = 0.0
+        self.timeout_updates = 0
         self.written: list[bytes] = []
         self.incoming = b"ready\n"
         self.write_error: Exception | None = None
         self.read_error: Exception | None = None
         self.close_error: Exception | None = None
         self.close_stays_open_on_error = False
+
+    @property
+    def timeout(self) -> float:
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, value: float) -> None:
+        self._timeout = value
+        self.timeout_updates += 1
 
     def close(self) -> None:
         if self.close_error is not None and self.close_stays_open_on_error:
@@ -61,6 +71,8 @@ def install_fake_modules(
         if open_error is not None:
             raise open_error
         captured.update(kwargs)
+        assert isinstance(kwargs["timeout"], (int, float))
+        connection._timeout = float(kwargs["timeout"])
         return connection
 
     serial_module = SimpleNamespace(
@@ -101,6 +113,25 @@ def test_pyserial_adapter_open_read_write_close(monkeypatch: pytest.MonkeyPatch)
 
     backend.close()
     assert not backend.is_open
+
+
+def test_read_only_reconfigures_port_when_timeout_changes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection, _ = install_fake_modules(monkeypatch)
+    backend = PySerialBackend()
+    backend.open(SerialConfig("COM7", read_timeout=0.2))
+
+    assert backend.read(4, 0.2) == b"read"
+    assert backend.read(4, 0.2) == b"read"
+    assert connection.timeout_updates == 0
+
+    assert backend.read(4, 0.1) == b"read"
+    assert connection.timeout_updates == 1
+    assert backend.read(4, 0.1) == b"read"
+    assert connection.timeout_updates == 1
+    assert backend.read(4, 0.2) == b"read"
+    assert connection.timeout_updates == 2
 
 
 def test_pyserial_adapter_maps_open_and_io_errors(monkeypatch: pytest.MonkeyPatch) -> None:
