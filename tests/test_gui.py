@@ -45,6 +45,31 @@ def test_port_refresh_preserves_real_id_and_manual_entry(qt_app: QApplication) -
     panel.close()
 
 
+def test_successful_port_refresh_clears_transient_panel_error(
+    qt_app: QApplication,
+) -> None:
+    class PortsFailOnce(MockSerialBackend):
+        fail_next = False
+
+        def available_ports(self) -> list[SerialPortInfo]:
+            if self.fail_next:
+                self.fail_next = False
+                raise CommunicationError("port enumeration failed")
+            return super().available_ports()
+
+    backend = PortsFailOnce()
+    window = MainWindow(backend)
+    backend.fail_next = True
+    window.refresh_ports()
+    assert window.application.state == ConnectionState.DISCONNECTED
+    assert window.connection_panel.status_label.text() == "Error: port enumeration failed"
+
+    window.refresh_ports()
+    assert window.connection_panel.port_combo.currentData() == "MOCK0"
+    assert window.connection_panel.status_label.text() == "Disconnected"
+    window.close()
+
+
 def test_mock_gui_connect_send_receive_disconnect_reconnect(qt_app: QApplication) -> None:
     backend = MockSerialBackend()
     window = MainWindow(backend)
