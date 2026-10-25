@@ -65,6 +65,8 @@ class MainWindow(QMainWindow):
             self.connection_panel.set_ports(self.application.available_ports())
         except HostApplicationError as exc:
             self.connection_panel.set_state(ConnectionState.ERROR, str(exc))
+        else:
+            self._update_state()
 
     def connect_serial(self, port: str, baudrate: int) -> None:
         try:
