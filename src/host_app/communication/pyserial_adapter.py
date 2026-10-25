@@ -90,7 +90,8 @@ class PySerialBackend(SerialBackend):
         if timeout < 0:
             raise ValueError("timeout must not be negative")
         try:
-            connection.timeout = timeout
+            if connection.timeout != timeout:
+                connection.timeout = timeout
             return bytes(connection.read(max_bytes))
         except (serial.SerialException, OSError) as exc:
             raise CommunicationError(f"serial read failed: {exc}") from exc
