@@ -21,6 +21,8 @@ def parse_command(text: str, *, max_tokens: int = 16) -> ParsedCommand:
         raise ValueError("max_tokens must be positive")
     if not isinstance(text, str):
         raise TypeError("text must be a string")
+    if "\x00" in text:
+        raise InvalidCommandError("command must not contain NUL")
     try:
         tokens = shlex.split(text.strip())
     except ValueError as exc:
