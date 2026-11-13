@@ -28,6 +28,14 @@ def test_parse_command_rejects_unclosed_quote_and_token_overflow() -> None:
         parse_command(1)  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize("text", ["sta\x00tus", "set label a\x00b", 'set label "a\x00b"'])
+def test_command_rejects_embedded_nul(text: str) -> None:
+    with pytest.raises(InvalidCommandError, match="NUL"):
+        parse_command(text)
+    with pytest.raises(InvalidCommandError, match="NUL"):
+        encode_command(text)
+
+
 def test_encode_command_normalizes_and_appends_terminator() -> None:
     assert encode_command('  set mode "safe"  ') == b"set mode safe\r\n"
 
